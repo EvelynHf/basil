@@ -16,6 +16,10 @@ import ctypes
 from basil.lang.c import myctypes
 from basil.lang.c.tests import mycmodulewrap
 
+quote [myfront]:
+    if __debug__:
+        QUOTEDEF_AST_DEBUG_FLAG = 1
+
 # ______________________________________________________________________
 # XXX Might want to ensure mycmodule.so or mycmodule.dll exists
 # already.  Is there some way to leverage distutils, but only within

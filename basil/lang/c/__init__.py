@@ -45,6 +45,9 @@ def myctypes (name, code, env):
     from basil.lang.c.MyCTypeFactory import MyCTypeFactory
     # Step 1: parse the code.
     pt = parseString(code)
+    if "C_PARSE_DEBUG_FLAG" in env:
+        import pprint
+        pprint.pprint(pt)
     # Step 2: convert the code to C types.
     handler = CDeclHandler(MyCTypeFactory())
     ctypes_decls = handler.handle_node(pt)

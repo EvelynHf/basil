@@ -41,6 +41,31 @@ class MyCInt (MyCType):
 
 # ______________________________________________________________________
 
+class MyCFloat (MyCType):
+    def to_ctype (self):
+        return "ctypes.c_float"
+
+    def to_wrapper (self, module_name):
+        ret_val = None
+        # XXX as above
+        return ret_val
+
+# ______________________________________________________________________
+
+class MyCDouble (MyCType):
+    def to_ctype (self):
+        return "ctypes.c_double"
+
+    def to_wrapper (self, module_name):
+        ret_val = None
+        # XXX as above
+        if self.name:
+            ret_val = ("%s.%s = ctypes.c_double.in_dll(%s, '%s')" %
+                       (module_name, self.name, module_name, self.name))
+        return ret_val
+
+# ______________________________________________________________________
+
 class MyCFunction (MyCType):
     def __init__ (self, ret_ty, params, fn_name = None):
         self.ret_ty = ret_ty
@@ -65,6 +90,12 @@ class MyCTypeFactory (basil.lang.c.CTypeFactory.CTypeFactory):
 
     def cInt (self, base = None):
         return MyCInt()
+
+    def cFloat (self, base = None):
+        return MyCFloat()
+
+    def cDouble (self, base = None):
+        return MyCDouble()
 
     def setName (self, name, ty_obj):
         ty_obj.set_name(name)
