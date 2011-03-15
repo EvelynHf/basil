@@ -1,0 +1,70 @@
+.. _intro:
+=====================
+Introduction to Basil
+=====================
+
+
+The Why, How, and What of Basil
+-------------------------------
+
+*Whereby we start with why and end up with an incomplete description
+of what.* [1]_
+
+Yacc and its descendants frustrate the hell out of us.
+
+Many tools for implementing languages lack the features that language
+users have come to enjoy.  These features may include:
+
+* Reusability and/or modularity.
+* Introspection.
+* Extensibility.
+
+The domain-specific languages we use to describe the syntax and
+semantics of a language have not fundamentally changed in decades.
+
+There are good reasons for keeping computer metalanguages more stable
+than computer languages.  We want stability.  Programs can change
+often, but we don't want programming languages to change *too* often.
+
+Basil is a framework for describing, building, analyzing, and changing
+computer languages.  Basil focuses on interoperability and evolution
+without discarding legacy tools.  Our tools interoperate by focusing
+on the common features of language specification tools.
+
+We want language independence.
+
+We want to play with many computer languages.
+
+
+.. _getting-basil:
+Getting Basil
+-------------
+
+Basil is currently hosted on `Google Code
+<http://basil.googlecode.com/>`_.  You can get it by clicking on the
+source tab and following the instructions regarding anonymous download.
+
+Basil requires Python_ 2.5 or a later version of the 2.*x* release chain.
+
+
+Using Basil as a Framework
+--------------------------
+
+Python is a great glue language.  We want to add glue for bits of
+other languages and their specifications.
+
+
+Using Basil as a Toolset
+------------------------
+
+Basil provides a set of applications for manipulating, and
+transforming language specifications.
+
+
+Footnotes, Citations, and Other References
+------------------------------------------
+
+.. [1] With thanks to Simon Sinek,
+   http://www.ted.com/talks/simon_sinek_how_great_leaders_inspire_action.html
+
+.. _Python: http://www.python.org/

@@ -2,8 +2,12 @@ Writing Python-like Languages Using the Pgen Module
 ===================================================
 
 Jonathan Riehl
-University of Chicago
-jriehl@uchicago.edu
+
+*Formerly of* The University of Chicago
+
+jriehl@uchicago.edu [
+
+----
 
 In Python enhancement proposal (PEP) 269 [1]_, I proposed that the parser
 generator used to build the CPython parser, pgen, be exposed as an
@@ -359,3 +363,5 @@ References
 
 .. [11] Parser Module Documentation
      http://www.python.org/doc/current/lib/module-parser.html
+
+.. [12] Now jriehl@spaceship.com

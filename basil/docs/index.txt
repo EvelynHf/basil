@@ -3,18 +3,16 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Basil's documentation!
-=================================
-
-Contents:
+Contents
+========
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
-   Talk-2007-11-13.txt
-   PgenAbstract.txt
-   RapidLanguagePrototyping.txt
+   intro.txt
+   concepts.txt
    modules.txt
+
 
 Indices and tables
 ==================
@@ -23,3 +21,13 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
+
+Papers, Essays, and Abstracts
+=============================
+
+.. toctree::
+   :maxdepth: 2
+
+   RapidLanguagePrototyping.txt
+   Talk-2007-11-13.txt
+   PgenAbstract.txt
