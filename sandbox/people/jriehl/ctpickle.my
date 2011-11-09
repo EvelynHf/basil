@@ -1,0 +1,35 @@
+#! /usr/bin/env mython
+# ______________________________________________________________________
+'''ctpickle.my
+
+Demonstrate how to stash compile-time values for use at run-time.
+'''
+# ______________________________________________________________________
+
+import cPickle
+import math
+
+quote [myfront]:
+    def enpickle (src):
+        pickle_dict = {}
+        exec src in globals(), pickle_dict
+        out_src = []
+        for k, v in pickle_dict.iteritems():
+            if not k.startswith('__'):
+                out_src.append('%s = cPickle.loads(%r)' %
+                               (k, cPickle.dumps(v, 2)))
+        ret_val = '\n'.join(out_src) + '\n'
+        return ret_val
+    ctpickle = makedesugar(enpickle)
+
+quote [ctpickle] ignored:
+    x = [math.pi * x / 16 for x in range(16)]
+    y = [math.cos(x_i) for x_i in x]
+    z = [math.sin(x_i) for x_i in x]
+
+print x
+print y
+print z
+
+# ______________________________________________________________________
+# End of ctpickle.my

@@ -1004,18 +1004,16 @@ class MyCodeGen (ASTHandler):
         self.graph.emit("COMPARE_OP", "==")
 
     def handle_Exec (self, node):
-        # XXX Note that compiler.parse gets locals and globals wrong,
-        # causing another test failure.
         self.set_lineno(node)
         self.handle(node.body)
-        if node.locals is None:
+        if node.globals is None:
             self.graph.emit("LOAD_CONST", None)
         else:
-            self.handle(node.locals)
-        if node.globals is None:
+            self.handle(node.globals)
+        if node.locals is None:
             self.graph.emit("DUP_TOP")
         else:
-            self.handle(node.globals)
+            self.handle(node.locals)
         self.graph.emit("EXEC_STMT")
 
     def handle_Expr (self, node):
