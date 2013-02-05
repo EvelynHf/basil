@@ -10,6 +10,7 @@ $Id$
 # Module imports
 
 import sys as _sys
+import ast as _pyast
 import os as _os
 import stat as _stat
 import struct as _struct
@@ -25,7 +26,7 @@ import MyRealParser as _myparser
 import myfront_transformer as _myabs
 import MythonRewriter as _myrw
 import MyCodeGen as _mycodegen
-import myfront_ast as _ast
+import myfront_ast as _myast
 import LL1ParserUtil as _LL1ParserUtil
 
 # ______________________________________________________________________
@@ -38,14 +39,56 @@ def myfrontend (text, env):
 
 # ______________________________________________________________________
 
+def _myast_to_pyast (node, attr_name = None, dict_rewriter = None):
+    if isinstance(node, _myast.AST):
+        node_type_name = type(node).__name__
+        pynode_type = getattr(_pyast, node_type_name)
+        members = node.__dict__
+        if dict_rewriter:
+            members = dict_rewriter(members)
+        ret_val = pynode_type(**_myast_to_pyast(members, attr_name,
+                                                dict_rewriter))
+    elif isinstance(node, list):
+        ret_val = [_myast_to_pyast(elem, attr_name, dict_rewriter)
+                   for elem in node]
+    elif isinstance(node, dict):
+        ret_val = dict((key, _myast_to_pyast(val, key, dict_rewriter))
+                       for key, val in node.items())
+    else:
+        if node is None and attr_name in ('lineno', 'col_offset'):
+            ret_val = -1
+        else:
+            ret_val = node
+    return ret_val
+
+# ______________________________________________________________________
+
 def mybackend (tree, env):
     """mybackend()
     Given what is presumably a Python abstract syntax tree, generate a
     code object for that tree."""
-    assert isinstance(tree, _ast.AST)
-    codegen_obj = _mycodegen.MyCodeGen(env.get("filename", "<string>"))
-    codegen_obj.handle(tree)
-    return codegen_obj.get_code(), env
+    assert isinstance(tree, _myast.AST)
+    filename = env.get("filename", "<string>")
+    # Technically the builtin Python compile() could handle AST nodes
+    # as of 2.6, but Mython supports 2.6 abstract syntax, so use the
+    # Mython compiler for what it supports.
+    if _sys.version_info < (2, 7):
+        codegen_obj = _mycodegen.MyCodeGen(filename)
+        codegen_obj.handle(tree)
+        code_obj = codegen_obj.get_code()
+    else:
+        def _patch_members (members):
+            # XXX Hack to patch from Mython AST (based on 2.5) to 2.6/2.7 AST.
+            ret_val = members
+            if 'decorators' in members:
+                ret_val = ret_val.copy()
+                decorators = ret_val.pop('decorators')
+                ret_val['decorator_list'] = decorators
+            return ret_val
+        tree = _myast_to_pyast(tree, dict_rewriter = _patch_members)
+        entry_point = 'eval' if isinstance(tree, _pyast.Expression) else 'exec'
+        code_obj = compile(tree, filename, entry_point)
+    return code_obj, env
 
 #______________________________________________________________________
 
@@ -84,7 +127,7 @@ def myeval (code, env = None):
     if isinstance(code, str):
         ret_val = eval(code, env)
     else:
-        assert isinstance(code, _ast.AST)
+        assert isinstance(code, _myast.AST)
         env = env.copy()
         code_obj, env = mybackend(code, env)
         ret_val = eval(code_obj, env)
@@ -92,7 +135,7 @@ def myeval (code, env = None):
 
 # ______________________________________________________________________
 
-myescape = _ASTUtils.mk_escaper(_ast)
+myescape = _ASTUtils.mk_escaper(_myast)
 
 # ______________________________________________________________________
 
@@ -105,9 +148,9 @@ def mython (name, code, env0):
     if name is not None:
         env1[name] = ast
         # XXX Add line and position information to the constructed syntax.
-        stmt_lst = [_ast.Assign([_ast.Name(name, _ast.Store())], esc_ast)]
+        stmt_lst = [_myast.Assign([_myast.Name(name, _myast.Store())], esc_ast)]
     else:
-        stmt_lst = [_ast.Expr(esc_ast)]
+        stmt_lst = [_myast.Expr(esc_ast)]
     return stmt_lst, env1
 
 # ______________________________________________________________________
