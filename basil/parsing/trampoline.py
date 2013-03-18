@@ -63,15 +63,15 @@ class TokenStream (object):
     def test_lookahead (self, *tokens):
         ret_val = False
         lookahead = self.get_lookahead()
-        if (lookahead[0] in tokens):
+        if lookahead[0] in tokens:
             ret_val = True
         elif lookahead[1] in tokens:
             ret_val = True
         return ret_val
 
-    def expect (self, token):
+    def expect (self, *tokens):
         crnt_token = self.get_token()
-        if (crnt_token[0] != token) and (crnt_token[1] != token):
+        if (crnt_token[0] not in tokens) and (crnt_token[1] not in tokens):
             raise SyntaxError("Got %s, expected %s." % (str(crnt_token),
                                                         str(token)))
         return crnt_token

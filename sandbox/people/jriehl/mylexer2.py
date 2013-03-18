@@ -12,6 +12,7 @@ Jonathan Riehl
 import sys
 import re
 import tokenize
+import pprint
 
 from basil.parsing.trampoline import TokenStream
 from basil.lang.python import TokenUtils
@@ -26,6 +27,19 @@ tok_name[BANG] = 'BANG'
 tok_name[MYEXPR] = 'MYEXPR'
 tok_name[MYSUITE] = 'MYSUITE'
 N_TOKENS = tokenize.N_TOKENS + 3
+
+pseudoprog = re.compile(
+    tokenize.Whitespace +
+    tokenize.group(tokenize.PseudoExtras, tokenize.Number, tokenize.Funny,
+                   tokenize.ContStr, tokenize.Name, r"[!]")
+    )
+
+CLOSERS = {
+    '{' : '}',
+    '(' : ')',
+    '<' : '>',
+    '[' : ']',
+}
 
 # ______________________________________________________________________
 # Compatibility layer 2.5/2.6
@@ -137,6 +151,7 @@ class MythonTokenStream (TokenStream):
         self.make_token = kws.get("make_token", self.make_token)
         self.endprog = kws.get("endprog")
         self.in_mysuite = kws.get("in_mysuite", False)
+        self.in_myexpr = kws.get("in_myexpr", False)
         self.strstart = kws.get("strstart", (-1, -1))
         self.empty_line_pattern = re.compile("\\A\\s*\\Z")
         self.ws_pattern = re.compile("\\A(\\s+)")
@@ -150,8 +165,13 @@ class MythonTokenStream (TokenStream):
         return ret_val
 
     def start_mysuite (self):
-        "Change the lexical state to reflect entry of a quotation block."
+        "Change the lexical state to reflect entry of a mysuite block."
         self.in_mysuite = True
+
+    def start_myexpr (self, open_delim):
+        "Change the lexical state to reflect entry of a myexpr."
+        self.open_delim = open_delim[1]
+        self.in_myexpr = True
 
     def readline (self):
         "Read a line from the readline callable, increment the line number."
@@ -309,13 +329,12 @@ class MythonTokenStream (TokenStream):
             else:
                 if not line:
                     if __debug__:
-                        import pprint
                         pprint.pprint(self.__dict__)
                     raise tokenize.TokenError("EOF in multi-line statement",
                                               (self.lnum, 0))
                 self.continued = 0
             while pos < max_pos:
-                pseudomatch = tokenize.pseudoprog.match(line, pos)
+                pseudomatch = pseudoprog.match(line, pos)
                 if pseudomatch:
                     start, end = pseudomatch.span(1)
                     spos, epos, pos = (self.lnum, start), (self.lnum, end), end
@@ -344,21 +363,90 @@ class MythonTokenStream (TokenStream):
                             self.contstr = line[start:]
                             self.contline = line
                             break
-                else:
-                    toknum = tokenize.ERRORTOKEN
-                    startpos = (self.lnum, pos)
-                    endpos = (self.lnum, pos + 1)
-                    if pos < max_pos:
-                        tokstr = line[pos]
-                        if tokstr == '!':
-                            # This is kinda a hack; should really be
-                            # adding any new operators to the regular
-                            # expressions in tokenize.
-                            toknum = BANG
+                    elif ((initial in tokenize.single_quoted) or
+                          (token[:2] in tokenize.single_quoted) or
+                          (token[:3] in tokenize.single_quoted)):
+                        if token[-1] == '\n':
+                            self.strstart = (self.lnum, start)
+                            self.endprog = (tokenize.endprogs[initial] or
+                                            tokenize.endprogs[token[1]] or
+                                            tokenize.endprogs[token[2]])
+                            self.contstr = line[start:]
+                            self.needcont = 1
+                            self.contline = line
+                            break
+                        else:
+                            yield self.make_token(tokenize.STRING, token, spos,
+                                                  epos, line)
+                    elif initial in namechars:
+                        yield self.make_token(tokenize.NAME, token, spos, epos,
+                                              line)
+                    elif initial == '\\':
+                        self.continued = 1
+                    elif initial == '!':
+                        yield self.make_token(BANG, token, spos, epos, line)
                     else:
-                        tokstr = ''
-                    yield self.make_token(toknum, tokstr, startpos, endpos,
-                                          line)
+                        if initial in '([{':
+                            self.parenlev += 1
+                        elif initial in '}])':
+                            self.parenlev -= 1
+                        yield self.make_token(tokenize.OP, token, spos, epos,
+                                              line)
+                        if (token == ':' and self.in_mysuite and
+                            self.parenlev == 0):
+                            cand_token = line[pos:].strip()
+                            if cand_token:
+                                token_with_ws_len = len(
+                                    line[pos:].rstrip('\r\n'))
+                                while line[pos].isspace():
+                                    pos += 1
+                                yield self.make_token(
+                                    MYSUITE, cand_token, (self.lnum, pos),
+                                    (self.lnum, epos[1] + token_with_ws_len),
+                                    line)
+                                pos += len(cand_token)
+                                self.in_mysuite = False
+                        elif self.in_myexpr:
+                            open_delim = self.open_delim
+                            close_delim = CLOSERS[open_delim]
+                            myexpr_depth = 1
+                            spos = epos
+                            myexpr_lns = [line]
+                            while 1:
+                                while pos < max_pos:
+                                    if line[pos] == open_delim:
+                                        myexpr_depth += 1
+                                    elif line[pos] == close_delim:
+                                        myexpr_depth -= 1
+                                    pos += 1
+                                    if myexpr_depth <= 0:
+                                        if close_delim in '}])':
+                                            self.parenlev -= 1
+                                        break
+                                if myexpr_depth > 0:
+                                    line = self.readline()
+                                    myexpr_lns.append(line)
+                                    pos, max_pos = 0, len(line)
+                                else:
+                                    assert myexpr_depth == 0
+                                    break
+                            epos = self.lnum, pos
+                            if len(myexpr_lns) == 1:
+                                token = line[spos[1]:pos]
+                            else:
+                                token = "".join((myexpr_lns[0][spos[1]:],
+                                                 "".join(myexpr_lns[1:-2]),
+                                                 myexpr_lns[-1][:pos]))
+                            lines = "".join(myexpr_lns)
+                            yield self.make_token(MYEXPR, token, spos, epos,
+                                                  lines)
+                            self.in_myexpr = False
+                            del self.open_delim
+                else:
+                    yield self.make_token(
+                        tokenize.ERRORTOKEN,
+                        line[pos] if pos < max_pos else '', (self.lnum, pos),
+                        (self.lnum, pos + 1), line)
                     pos += 1
         for indent in self.indents[1:]:
             yield self.make_token(tokenize.DEDENT, '', (self.lnum, 0),
@@ -391,13 +479,12 @@ def scan_mython_file (file_obj):
     ret_val.append(crnt_token)
     try:
         while crnt_token[0] != tokenize.ENDMARKER:
-            if crnt_token[:2] == (tokenize.NAME, 'mysuite'):
+            if crnt_token[:2] == (tokenize.NAME, 'my'):
                 token_stream.start_mysuite()
             crnt_token = token_stream.get_token()
             ret_val.append(crnt_token)
     finally:
         if __debug__:
-            import pprint
             pprint.pprint(ret_val)
     return ret_val
 
@@ -436,9 +523,11 @@ def mytokenize (readline, tokeneater=tokenize.printtoken):
 # ______________________________________________________________________
 
 if __name__ == "__main__":
-    import pprint
     for filename in sys.argv[1:]:
-        pprint.pprint(scan_mython_file(open(filename)))
+        with open(filename) as fileobj:
+            pprint.pprint(scan_mython_file(fileobj))
+    else:
+        print BANG, MYEXPR, MYSUITE
 
 # ______________________________________________________________________
 # End of mylexer.py

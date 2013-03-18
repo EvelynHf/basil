@@ -194,12 +194,13 @@ def addAccelerators (g):
     contain accelerator information.  Returns a new grammar tuple.
     """
     # ____________________________________________________________
-    def handleState (state):
+    def handleState (state_pair):
         """handleState()
         Warning: this is nested so it can get at the grammar passed to
         addAccelerators() - rather than accepting it as an argument.  I only
         do this b/c this function is map()'d.
         """
+        state_index, state = state_pair
         def warn (message):
             print "addAccelerators(): Warning:", message
         arcs, accel, accept = state
@@ -226,9 +227,9 @@ def addAccelerators (g):
                         if oldVal != -1:
                             # XXX Make this error reporting more better.
                             oldType = oldVal >> 8
-                            warn("ambiguity at bit %d (for %d: was to %x, now "
-                                 "to %x)." % (ibit, states.index(state),
-                                              oldVal, accelVal))
+                            warn("ambiguity at bit %d (for state %d: was to "
+                                 "%x, now to %x)." % (
+                                    ibit, state_index, oldVal, accelVal))
                         accelArray[ibit] = (arrow | (1 << 7) |
                                             ((type - token.NT_OFFSET) << 8))
             elif 0 == labelIndex:
@@ -247,7 +248,7 @@ def addAccelerators (g):
     # ____________________________________________________________
     def handleDFA (dfa):
         type, name, initial, states, first = dfa
-        return (type, name, initial, map(handleState, states))
+        return (type, name, initial, map(handleState, enumerate(states)))
     # ____________________________________________________________
     dfas, labels, start, accel = g
     if 0 == accel:
