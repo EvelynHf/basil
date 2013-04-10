@@ -32,7 +32,8 @@ class AST (object):
     # XXX This seems like taking the long road to get there.  My
     # options are to just stick with the original plan (generate
     # custom code for each constructor), or refine this.
-    def map_fields (self, field_list, match_tup, mapping = None):
+    @classmethod
+    def map_fields (cls, field_list, match_tup, mapping = None):
         if mapping is None:
             mapping = {}
         field_len = len(field_list)
@@ -46,17 +47,17 @@ class AST (object):
                 if len(match_tup) == 0:
                     raise ASTFieldMappingError()
                 mapping[field_name] = match_tup[0]
-                mapping = self.map_fields(field_list[1:], match_tup[1:],
-                                          mapping)
+                mapping = cls.map_fields(field_list[1:], match_tup[1:],
+                                         mapping)
             else:
                 try:
                     mapping = mapping.copy()
                     mapping[field_name] = match_tup[0]
-                    mapping = self.map_fields(field_list[1:], match_tup[1:],
-                                              mapping)
+                    mapping = cls.map_fields(field_list[1:], match_tup[1:],
+                                             mapping)
                 except ASTFieldMappingError:
-                    mapping = self.map_fields(field_list[1:], match_tup,
-                                              mapping)
+                    mapping = cls.map_fields(field_list[1:], match_tup,
+                                             mapping)
         return mapping
     # ____________________________________________________________
     def get_attributes (self):

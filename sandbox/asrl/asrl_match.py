@@ -6,7 +6,7 @@ Jonathan Riehl"""
 # ______________________________________________________________________
 # Module imports
 
-from basil.lang.asdl.AST import map_fields
+from basil.lang.asdl.AST import AST
 from asrlir import ASRL
 import asrl_utils
 
@@ -105,7 +105,7 @@ def match (asrl_ast, obj, env = None):
             # Look up field and attribute data for the given label.
             field_list = env['$ASDL'][constructor_name].__asdl_meta__['fields']
             # Map AST arguments to fields and attributes.
-            field_map = map_fields(field_list, constructor_args)
+            field_map = AST.map_fields(field_list, constructor_args)
             # Match fields against the current object; must match all
             # fields.
             for field_name, _, _, _ in field_list:
