@@ -253,10 +253,11 @@ class Testerizer:
         """Testerizer.handleModel
         """
         global __DEBUG__, __VERBOSE__
-        if "-debug" in args:
-            __DEBUG__ = True
-        if "-verbose" in args:
-            __VERBOSE__ = True
+        if args is not None:
+            if "-debug" in args:
+                __DEBUG__ = True
+            if "-verbose" in args:
+                __VERBOSE__ = True
         despecializer = Despecializer.getModelHandler()()
         factory = despecializer.factory
         despecializedModel = despecializer.handleModel(model)
